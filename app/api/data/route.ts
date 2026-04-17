@@ -43,6 +43,14 @@ function migrate(payload: Record<string, unknown>): Record<string, unknown> {
   while ((payload.caKarte as unknown[]).length < 4) (payload.caKarte as unknown[]).push(EMPTY_KARTE())
 
   if (!payload.companyCommitments) payload.companyCommitments = []
+  // Migrate company commitments to include target fields
+  if (Array.isArray(payload.companyCommitments)) {
+    payload.companyCommitments = (payload.companyCommitments as Record<string, unknown>[]).map(c => ({
+      targetRecommendations:0, targetDocumentPass:0, targetFirstPass:0,
+      targetSecondPass:0, targetFinalPass:0, targetOfferCount:0, targetPlacementCount:0,
+      dropRecords:[], ...c,
+    }))
+  }
   if (!payload.fbItems) payload.fbItems = []
   if (!payload.focusData) payload.focusData = []
   if (!payload.pjData) payload.pjData = []

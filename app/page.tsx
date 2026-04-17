@@ -150,17 +150,17 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
   const updateNum=(key:keyof CompanyCommitment,val:number)=>{const next=[...commitments];next[sel]={...next[sel],[key]:val} as CompanyCommitment;onChange(next)}
   const co=commitments[sel]
   const funnelSteps=[
-    {key:'recommendationsSent' as const,label:'推薦',color:C.accent},
-    {key:'documentPass' as const,label:'書類通過',color:C.purple},
-    {key:'firstPass' as const,label:'一次通過',color:C.teal},
-    {key:'secondPass' as const,label:'二次通過',color:C.green},
-    {key:'finalPass' as const,label:'最終通過',color:C.orange},
-    {key:'offerCount' as const,label:'内定',color:C.red},
-    {key:'placementCount' as const,label:'入社',color:C.pink},
+    {key:'recommendationsSent' as const,tKey:'targetRecommendations' as const,label:'推薦',color:C.accent},
+    {key:'documentPass' as const,tKey:'targetDocumentPass' as const,label:'書類通過',color:C.purple},
+    {key:'firstPass' as const,tKey:'targetFirstPass' as const,label:'一次通過',color:C.teal},
+    {key:'secondPass' as const,tKey:'targetSecondPass' as const,label:'二次通過',color:C.green},
+    {key:'finalPass' as const,tKey:'targetFinalPass' as const,label:'最終通過',color:C.orange},
+    {key:'offerCount' as const,tKey:'targetOfferCount' as const,label:'内定',color:C.red},
+    {key:'placementCount' as const,tKey:'targetPlacementCount' as const,label:'入社',color:C.pink},
   ]
   const convRate=(a:number,b:number)=>b>0?((a/b)*100).toFixed(0)+'%':'—'
   const totalConv=co?convRate(co.placementCount,co.recommendationsSent):'—'
-  const maxVal=co?Math.max(...funnelSteps.map(s=>Number(co[s.key])||0),1):1
+  const maxVal=co?Math.max(...funnelSteps.map(s=>Math.max(Number(co[s.key])||0,Number(co[s.tKey])||0)),1):1
 
   // Drop records
   const [dropForm,setDropForm]=useState({candidateName:'',stage:'書類',reason:'',date:''})
@@ -196,18 +196,40 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
           <div className="p-5">
             <input className="w-full text-sm font-bold bg-transparent border-none outline-none mb-4" placeholder="企業名を入力..." value={co.name} onChange={e=>update('name',e.target.value)} />
             <div className="flex flex-col gap-3">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-16"></div>
+                <div className="flex-1"></div>
+                <div className="w-16 text-center text-xs font-bold" style={{color:C.textTertiary}}>実績</div>
+                <div className="w-16 text-center text-xs font-bold" style={{color:C.accent}}>目標</div>
+                <div className="w-12"></div>
+              </div>
               {funnelSteps.map((step,si)=>{
                 const val=Number(co[step.key])||0
+                const tgt=Number(co[step.tKey])||0
                 const prevVal=si>0?Number(co[funnelSteps[si-1].key])||0:0
-                return <div key={step.key} className="flex items-center gap-3">
-                  <div className="w-16 text-xs font-semibold text-right" style={{color:step.color}}>{step.label}</div>
-                  <div className="flex-1 h-8 rounded-lg overflow-hidden" style={{background:C.surface}}>
-                    <div className="h-full rounded-lg transition-all duration-500 flex items-center px-3" style={{width:`${Math.max((val/maxVal)*100,4)}%`,background:step.color+'20'}}>
-                      <span className="text-xs font-bold" style={{color:step.color}}>{val}</span>
+                const pctOfTarget=tgt>0?Math.min((val/tgt)*100,100):0
+                return <div key={step.key}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 text-xs font-semibold text-right" style={{color:step.color}}>{step.label}</div>
+                    <div className="flex-1 h-8 rounded-lg overflow-hidden relative" style={{background:C.surface}}>
+                      {/* Target marker */}
+                      {tgt>0&&<div className="absolute top-0 bottom-0 w-0.5" style={{left:`${Math.max((tgt/maxVal)*100,2)}%`,background:step.color,opacity:0.4,zIndex:1}} />}
+                      {/* Actual bar */}
+                      <div className="h-full rounded-lg transition-all duration-500 flex items-center px-3" style={{width:`${Math.max((val/maxVal)*100,4)}%`,background:step.color+'20'}}>
+                        <span className="text-xs font-bold" style={{color:step.color}}>{val}</span>
+                      </div>
                     </div>
+                    <input type="number" className="ca-input w-16" value={val||''} placeholder="実績" onChange={e=>updateNum(step.key,Number(e.target.value)||0)} />
+                    <input type="number" className="ca-input w-16" value={tgt||''} placeholder="目標" style={{borderColor:tgt>0?C.accent+'40':'transparent'}} onChange={e=>updateNum(step.tKey,Number(e.target.value)||0)} />
+                    {si>0&&prevVal>0?<span className="text-xs font-semibold whitespace-nowrap w-12 text-right" style={{color:val/prevVal>=0.5?C.green:val/prevVal>=0.25?C.orange:C.red}}>{convRate(val,prevVal)}</span>:<span className="w-12" />}
                   </div>
-                  <input type="number" className="ca-input w-16" value={val||''} placeholder="0" onChange={e=>updateNum(step.key,Number(e.target.value)||0)} />
-                  {si>0&&prevVal>0&&<span className="text-xs font-semibold whitespace-nowrap" style={{color:val/prevVal>=0.5?C.green:val/prevVal>=0.25?C.orange:C.red}}>{convRate(val,prevVal)}</span>}
+                  {tgt>0&&<div className="ml-[76px] mr-[140px] mt-1">
+                    <div className="progress-bar" style={{height:3}}>
+                      <div className="progress-bar-fill" style={{width:`${pctOfTarget}%`,background:pctOfTarget>=100?C.green:step.color}} />
+                    </div>
+                    <div className="text-right"><span className="text-xs font-bold" style={{color:pctOfTarget>=100?C.green:step.color}}>{pctOfTarget.toFixed(0)}%</span></div>
+                  </div>}
                 </div>
               })}
             </div>
@@ -254,6 +276,24 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
               <div className="text-xs" style={{color:C.textTertiary}}>推薦→入社（全体）</div>
               <div className="text-3xl font-extrabold" style={{color:C.accent}}>{totalConv}</div>
             </div>
+          </div>
+        </Card>
+        <Card title="目標達成状況">
+          <div className="p-5 flex flex-col gap-2.5">
+            {funnelSteps.map(step=>{
+              const val=Number(co[step.key])||0, tgt=Number(co[step.tKey])||0
+              if(tgt===0) return null
+              const pctVal=Math.min((val/tgt)*100,999)
+              return <div key={step.key}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold" style={{color:step.color}}>{step.label}</span>
+                  <span className="text-xs" style={{color:C.textTertiary}}>{val} / {tgt}</span>
+                </div>
+                <div className="progress-bar"><div className="progress-bar-fill" style={{width:`${Math.min(pctVal,100)}%`,background:pctVal>=100?C.green:step.color}} /></div>
+                <div className="text-right"><span className="text-xs font-bold" style={{color:pctVal>=100?C.green:pctVal>=70?step.color:C.red}}>{pctVal.toFixed(0)}%</span></div>
+              </div>
+            })}
+            {funnelSteps.every(s=>!(Number(co[s.tKey])||0))&&<div className="text-center py-4 text-xs" style={{color:C.textTertiary}}>ファネルの「目標」列に数値を入力すると達成状況が表示されます</div>}
           </div>
         </Card>
       </div>
