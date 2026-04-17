@@ -278,32 +278,23 @@ function CAKarteTab({karte,fbItems,currentUser,onChange}:{karte:CAKarte[];fbItem
 
   const totalDropouts=DROPOUT_STAGES.reduce((s,st)=>s+(k.dropout[st.key]?.count||0),0)
   const maxStage=DROPOUT_STAGES.reduce((max,st)=>(k.dropout[st.key]?.count||0)>(k.dropout[max.key]?.count||0)?st:max,DROPOUT_STAGES[0])
-  const maxRank=CANDIDATE_RANKS.reduce((max,r)=>{
-    const rd=k.rankDropout[r.key]; const total=DROPOUT_STAGES.reduce((s,st)=>s+(rd?.[st.key as keyof RankDropout] as number||0),0)
-    const maxTotal=DROPOUT_STAGES.reduce((s,st)=>s+(k.rankDropout[max.key]?.[st.key as keyof RankDropout] as number||0),0)
-    return total>maxTotal?r:max
-  },CANDIDATE_RANKS[0])
   const caFbs=fbItems.filter(f=>f.caName===CA_NAMES[selIdx])
 
-  // Rank chart data
-  const rankChartData=CANDIDATE_RANKS.map(r=>{
-    const rd=k.rankDropout[r.key]
-    const dropTotal=DROPOUT_STAGES.reduce((s,st)=>s+(rd?.[st.key as keyof RankDropout] as number||0),0)
-    return {name:r.label,候補者数:rd?.totalCandidates||0,離脱数:dropTotal}
-  })
+  // Dropout chart data
+  const dropoutChartData=DROPOUT_STAGES.filter(st=>(k.dropout[st.key]?.count||0)>0).map(st=>({name:st.label,離脱数:k.dropout[st.key]?.count||0}))
 
   return <div className="fade-in">
     <div className="flex gap-2 mb-5">{CA_NAMES.map((name,i)=><button key={name} onClick={()=>setSelIdx(i)} className="px-4 py-2 rounded-full text-xs font-semibold transition-all" style={{background:selIdx===i?C.accent:C.white,color:selIdx===i?C.white:C.text,border:`1px solid ${selIdx===i?C.accent:C.border}`}}>{name}</button>)}</div>
 
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-3 gap-4 mb-6">
       <StatCard icon="📉" label="総離脱数" value={totalDropouts} color={C.red} />
-      <StatCard icon="⚠️" label="最多離脱ステージ" value={maxStage.label} color={C.orange} />
-      <StatCard icon="👥" label="最多離脱ランク" value={maxRank.label} color={C.purple} />
+      <StatCard icon="⚠️" label="最多離脱ステージ" value={totalDropouts>0?maxStage.label:'—'} color={C.orange} />
       <StatCard icon="💬" label="FB件数" value={caFbs.length} color={C.accent} />
     </div>
 
     <div className="grid grid-cols-2 gap-5 mb-5">
-      <Card title="フェーズ別離脱カウント・理���">
+      {/* 左: フェーズ別離脱 */}
+      <Card title="フェーズ別離脱カウント・理由">
         <div className="p-4 flex flex-col gap-2">{DROPOUT_STAGES.map(st=>{
           const d=k.dropout[st.key]??defaultStageDropout()
           return <div key={st.key} className="rounded-lg p-3" style={{background:d.count>0?st.color+'08':C.bg}}>
@@ -320,61 +311,54 @@ function CAKarteTab({karte,fbItems,currentUser,onChange}:{karte:CAKarte[];fbItem
         })}</div>
       </Card>
 
-      <Card title="ランク別離脱">
-        <div className="p-4 flex flex-col gap-3">{CANDIDATE_RANKS.map(r=>{
-          const rd=k.rankDropout[r.key]??defaultRankDropout()
-          const dropTotal=DROPOUT_STAGES.reduce((s,st)=>s+(rd[st.key as keyof RankDropout] as number||0),0)
-          const rate=rd.totalCandidates>0?((dropTotal/rd.totalCandidates)*100).toFixed(0)+'%':'—'
-          return <div key={r.key} className="rounded-lg p-3 border" style={{borderColor:C.border,borderLeft:`4px solid ${r.color}`}}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold" style={{color:r.color}}>{r.label}</span>
-              <span className="text-xs" style={{color:C.textTertiary}}>離脱率: <strong style={{color:C.red}}>{rate}</strong></span>
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs" style={{color:C.textTertiary}}>候補者数</span>
-              <input type="number" className="ca-input w-16" disabled={!isAdmin} value={rd.totalCandidates||''} placeholder="0" onChange={e=>updateK(kk=>({...kk,rankDropout:{...kk.rankDropout,[r.key]:{...rd,totalCandidates:Number(e.target.value)||0}}}))} />
-            </div>
-            <div className="flex flex-wrap gap-1">{DROPOUT_STAGES.map(st=>{
-              const v=rd[st.key as keyof RankDropout] as number||0
-              return v>0?<span key={st.key} className="text-xs px-2 py-0.5 rounded-full" style={{background:st.color+'14',color:st.color}}>{st.label} {v}</span>:null
-            })}</div>
+      {/* 右: リッチコンテンツ */}
+      <div className="flex flex-col gap-5">
+        {/* 離脱分布チャート */}
+        {dropoutChartData.length>0&&<Card title="離脱分布">
+          <div className="p-4" style={{height:200}}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dropoutChartData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} /><XAxis type="number" tick={{fill:C.textTertiary,fontSize:11}} /><YAxis type="category" dataKey="name" tick={{fill:C.text,fontSize:11}} width={70} /><Tooltip contentStyle={{borderRadius:10,border:`1px solid ${C.border}`,boxShadow:C.shadow2,fontSize:13}} /><Bar dataKey="離脱数" fill={C.red} radius={[0,4,4,0]}>{dropoutChartData.map((_,i)=><Cell key={i} fill={DROPOUT_STAGES[i]?.color||C.red} />)}</Bar></BarChart>
+            </ResponsiveContainer>
           </div>
-        })}</div>
-      </Card>
-    </div>
+        </Card>}
 
-    <Card title="ランク別離脱率サマリー">
-      <div className="p-5" style={{height:220}}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rankChartData}><CartesianGrid strokeDasharray="3 3" stroke={C.borderLight} /><XAxis dataKey="name" tick={{fill:C.textTertiary,fontSize:12}} /><YAxis tick={{fill:C.textTertiary,fontSize:12}} /><Tooltip contentStyle={{borderRadius:10,border:`1px solid ${C.border}`,boxShadow:C.shadow2,fontSize:13}} /><Legend wrapperStyle={{fontSize:12}} /><Bar dataKey="候補者数" fill={C.accent+'40'} radius={[4,4,0,0]} /><Bar dataKey="離脱��" fill={C.red} radius={[4,4,0,0]} /></BarChart>
-        </ResponsiveContainer>
+        {/* 強み・弱み・改善 コンパクト表示 */}
+        {[{key:'strengthNote' as const,label:'強みの分析',icon:'💪',color:C.green},{key:'weaknessNote' as const,label:'弱み・課題',icon:'⚠️',color:C.red},{key:'improvementNote' as const,label:'改善計画',icon:'🚀',color:C.orange}].map(f=>
+          <div key={f.key} className="bg-white rounded-xl border overflow-hidden" style={{borderColor:C.border,boxShadow:C.shadow1,borderLeft:`4px solid ${f.color}`}}>
+            <div className="px-5 py-3 border-b flex items-center gap-2" style={{borderColor:C.border,background:C.bg}}>
+              <span>{f.icon}</span><span className="text-sm font-bold">{f.label}</span>
+            </div>
+            <div className="p-4">
+              <textarea className="text-area" rows={3} disabled={!isAdmin} placeholder={f.label+'を入力...'} value={k[f.key]} onChange={e=>updateK(kk=>({...kk,[f.key]:e.target.value}))} />
+            </div>
+          </div>
+        )}
       </div>
-    </Card>
-
-    <div className="grid grid-cols-3 gap-5 mt-5">
-      {[{key:'strengthNote' as const,label:'強みの分析',icon:'💪',color:C.green},{key:'weaknessNote' as const,label:'弱み・課題',icon:'⚠️',color:C.red},{key:'improvementNote' as const,label:'改善計画',icon:'🚀',color:C.orange}].map(f=>
-        <Card key={f.key} title={`${f.icon} ${f.label}`}>
-          <div className="p-4" style={{borderLeft:`4px solid ${f.color}`}}>
-            <textarea className="text-area" rows={4} disabled={!isAdmin} placeholder={f.label+'を入力...'} value={k[f.key]} onChange={e=>updateK(kk=>({...kk,[f.key]:e.target.value}))} />
-          </div>
-        </Card>
-      )}
     </div>
 
-    <div className="grid grid-cols-2 gap-5 mt-5">
-      <Card title="成長メモ" action={isAdmin?<button onClick={()=>updateK(kk=>({...kk,growthHistory:[{date:new Date().toISOString().slice(0,10),content:''},...kk.growthHistory]}))} className="text-xs font-semibold" style={{color:C.accent}}>+ ���加</button>:undefined}>
-        <div className="p-4 max-h-60 overflow-y-auto flex flex-col gap-2">{k.growthHistory.length===0&&<div className="text-center py-6 text-sm" style={{color:C.textTertiary}}>記録なし</div>}
-        {k.growthHistory.map((g,gi)=><div key={gi} className="flex gap-3 items-start p-2 rounded-lg" style={{background:C.bg}}>
-          <input type="date" className="text-xs border rounded px-2 py-1" style={{borderColor:C.border}} disabled={!isAdmin} value={g.date} onChange={e=>updateK(kk=>{const h=[...kk.growthHistory];h[gi]={...h[gi],date:e.target.value};return {...kk,growthHistory:h}})} />
-          <input className="flex-1 text-sm bg-transparent outline-none" disabled={!isAdmin} placeholder="成長メモ..." value={g.content} onChange={e=>updateK(kk=>{const h=[...kk.growthHistory];h[gi]={...h[gi],content:e.target.value};return {...kk,growthHistory:h}})} />
-          {isAdmin&&<button onClick={()=>updateK(kk=>({...kk,growthHistory:kk.growthHistory.filter((_,j)=>j!==gi)}))} className="text-xs opacity-30 hover:opacity-100">✕</button>}
+    {/* 下段: 成長メモ + FB履歴 */}
+    <div className="grid grid-cols-2 gap-5">
+      <Card title="📈 成長メモ" action={isAdmin?<button onClick={()=>updateK(kk=>({...kk,growthHistory:[{date:new Date().toISOString().slice(0,10),content:''},...kk.growthHistory]}))} className="text-xs font-semibold" style={{color:C.accent}}>+ 追加</button>:undefined}>
+        <div className="p-4 max-h-72 overflow-y-auto flex flex-col gap-2">{k.growthHistory.length===0&&<div className="text-center py-8 text-sm" style={{color:C.textTertiary}}>成長メモを追加してください</div>}
+        {k.growthHistory.map((g,gi)=><div key={gi} className="flex gap-3 items-start p-3 rounded-lg" style={{background:C.bg}}>
+          <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0" style={{background:C.accent}} />
+          <div className="flex-1">
+            <input type="date" className="text-xs font-semibold mb-1 bg-transparent outline-none" style={{color:C.textTertiary}} disabled={!isAdmin} value={g.date} onChange={e=>updateK(kk=>{const h=[...kk.growthHistory];h[gi]={...h[gi],date:e.target.value};return {...kk,growthHistory:h}})} />
+            <input className="w-full text-sm bg-transparent outline-none" disabled={!isAdmin} placeholder="成長メモ..." value={g.content} onChange={e=>updateK(kk=>{const h=[...kk.growthHistory];h[gi]={...h[gi],content:e.target.value};return {...kk,growthHistory:h}})} />
+          </div>
+          {isAdmin&&<button onClick={()=>updateK(kk=>({...kk,growthHistory:kk.growthHistory.filter((_,j)=>j!==gi)}))} className="text-xs opacity-30 hover:opacity-100 mt-1">✕</button>}
         </div>)}</div>
       </Card>
-      <Card title="直近のFB履歴">
-        <div className="p-4 max-h-60 overflow-y-auto flex flex-col gap-2">{caFbs.length===0&&<div className="text-center py-6 text-sm" style={{color:C.textTertiary}}>FB記録なし</div>}
-        {caFbs.slice(0,10).map((fb,fi)=><div key={fi} className="p-3 rounded-lg" style={{background:C.bg}}>
-          <div className="flex items-center gap-2 mb-1"><span className="text-xs font-bold">{fb.candidateName}</span><span className="text-xs" style={{color:C.textTertiary}}>@{fb.company}</span><span className="text-xs ml-auto" style={{color:C.textTertiary}}>{fb.date}</span></div>
-          <div className="text-xs" style={{color:C.textSecondary}}>{fb.answer||fb.question}</div>
+      <Card title="💬 直近のFB履歴">
+        <div className="p-4 max-h-72 overflow-y-auto flex flex-col gap-2">{caFbs.length===0&&<div className="text-center py-8 text-sm" style={{color:C.textTertiary}}>同席FBタブでFBを追加するとここに表示されます</div>}
+        {caFbs.slice(0,10).map((fb,fi)=><div key={fi} className="p-3 rounded-lg border" style={{background:C.white,borderColor:C.borderLight}}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-sm font-bold">{fb.candidateName}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{background:C.accentLight,color:C.accent}}>@{fb.company}</span>
+            <span className="text-xs ml-auto" style={{color:C.textTertiary}}>{fb.date}</span>
+          </div>
+          {fb.question&&<div className="text-xs mb-1" style={{color:C.textSecondary}}><span className="font-semibold" style={{color:C.textTertiary}}>Q:</span> {fb.question}</div>}
+          {fb.answer&&<div className="text-xs" style={{color:C.green}}><span className="font-semibold">A:</span> {fb.answer}</div>}
         </div>)}</div>
       </Card>
     </div>
@@ -504,11 +488,11 @@ function StudyTab({study,shiryoItems,onStudyChange,onShiryoChange}:{study:StudyD
 }
 
 // ─── Main Dashboard ───
-type TabId = 'overall'|'cscsl'|'focus'|'pj'|'target'|'feedback'|'karte'|'commit'|'study'
+type TabId = 'overall'|'cscsl'|'pj'|'target'|'feedback'|'karte'|'commit'
 const TABS:{id:TabId;label:string}[] = [
-  {id:'overall',label:'📈 全体KPI'},{id:'cscsl',label:'🔀 CS/CSL別'},{id:'focus',label:'🎯 注力企業'},
+  {id:'overall',label:'📈 全体KPI'},{id:'cscsl',label:'🔀 CS/CSL別'},
   {id:'pj',label:'📋 PJ進捗'},{id:'target',label:'🎯 目標設定'},{id:'feedback',label:'💬 同席FB'},
-  {id:'karte',label:'🩺 CAカルテ'},{id:'commit',label:'🏢 企業コミット'},{id:'study',label:'📚 勉強会'},
+  {id:'karte',label:'🩺 CAカルテ'},{id:'commit',label:'🏢 企業コミット'},
 ]
 
 export default function Dashboard() {
@@ -660,15 +644,6 @@ export default function Dashboard() {
           {seg==='csl'&&<><SectionTitle color={C.purple}>CSL 全体指標</SectionTitle>{renderKpiGrid(cslKpi)}<Card title="CSL CA���"><CaTable data={data.csl.ca} currentUser={user} onChange={(i,f,v)=>updateCaRow('csl',i,f,v)} /></Card></>}
         </div>}
 
-        {/* 注��企業 */}
-        {tab==='focus'&&<div className="fade-in">
-          <div className="mb-6 flex items-center justify-between">
-            <div><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">注力企業</h2></div>
-            <button onClick={()=>setData(p=>({...p,focusData:[...p.focusData,{name:'',doc:0,first:0,second:0,final:0,offer:0,decided:0,sales:0}]}))} className="text-xs font-semibold px-4 py-2.5 rounded-lg" style={{border:`1.5px solid ${C.accent}`,color:C.accent,background:C.white}}>+ 企業を追加</button>
-          </div>
-          <FocusTable rows={data.focusData} onChange={rows=>setData(p=>({...p,focusData:rows}))} />
-        </div>}
-
         {/* PJ進捗 */}
         {tab==='pj'&&<div className="fade-in">
           <div className="mb-6 flex items-center justify-between">
@@ -702,11 +677,6 @@ export default function Dashboard() {
           <CompanyCommitTab commitments={data.companyCommitments} onChange={companyCommitments=>setData(p=>({...p,companyCommitments}))} />
         </div>}
 
-        {/* 勉強会 */}
-        {tab==='study'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">10分勉強会</h2></div>
-          <StudyTab study={data.study} shiryoItems={data.shiryoItems} onStudyChange={study=>setData(p=>({...p,study}))} onShiryoChange={shiryoItems=>setData(p=>({...p,shiryoItems}))} />
-        </div>}
       </main>
 
       {/* Toast */}
