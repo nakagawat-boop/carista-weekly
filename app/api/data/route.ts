@@ -48,7 +48,7 @@ function migrate(payload: Record<string, unknown>): Record<string, unknown> {
     payload.companyCommitments = (payload.companyCommitments as Record<string, unknown>[]).map(c => ({
       targetRecommendations:0, targetDocumentPass:0, targetFirstPass:0,
       targetSecondPass:0, targetFinalPass:0, targetOfferCount:0, targetPlacementCount:0,
-      dropRecords:[], ...c,
+      sales:0, targetSales:0, dropRecords:[], ...c,
     }))
   }
   if (!payload.fbItems) payload.fbItems = []

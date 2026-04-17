@@ -163,6 +163,7 @@ export interface CompanyCommitment {
   finalPass: number
   offerCount: number
   placementCount: number
+  sales: number
   // 目標値
   targetRecommendations: number
   targetDocumentPass: number
@@ -171,6 +172,7 @@ export interface CompanyCommitment {
   targetFinalPass: number
   targetOfferCount: number
   targetPlacementCount: number
+  targetSales: number
   notes: string
   dropRecords: CompanyDropRecord[]
 }
@@ -214,9 +216,9 @@ export const defaultCAKarte = (): CAKarte => ({
 })
 export const defaultCompanyCommitment = (): CompanyCommitment => ({
   name:'', recommendationsSent:0, documentPass:0, firstPass:0,
-  secondPass:0, finalPass:0, offerCount:0, placementCount:0,
+  secondPass:0, finalPass:0, offerCount:0, placementCount:0, sales:0,
   targetRecommendations:0, targetDocumentPass:0, targetFirstPass:0,
-  targetSecondPass:0, targetFinalPass:0, targetOfferCount:0, targetPlacementCount:0,
+  targetSecondPass:0, targetFinalPass:0, targetOfferCount:0, targetPlacementCount:0, targetSales:0,
   notes:'', dropRecords:[],
 })
 export const defaultStudy = (): StudyData => ({ date:'', theme:'', learning:'', members:'', next:'', requester:'', content:'', actionItems:'', sharedNotes:'' })

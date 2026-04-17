@@ -150,17 +150,20 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
   const updateNum=(key:keyof CompanyCommitment,val:number)=>{const next=[...commitments];next[sel]={...next[sel],[key]:val} as CompanyCommitment;onChange(next)}
   const co=commitments[sel]
   const funnelSteps=[
-    {key:'recommendationsSent' as const,tKey:'targetRecommendations' as const,label:'推薦',color:C.accent},
-    {key:'documentPass' as const,tKey:'targetDocumentPass' as const,label:'書類通過',color:C.purple},
-    {key:'firstPass' as const,tKey:'targetFirstPass' as const,label:'一次通過',color:C.teal},
-    {key:'secondPass' as const,tKey:'targetSecondPass' as const,label:'二次通過',color:C.green},
-    {key:'finalPass' as const,tKey:'targetFinalPass' as const,label:'最終通過',color:C.orange},
-    {key:'offerCount' as const,tKey:'targetOfferCount' as const,label:'内定',color:C.red},
-    {key:'placementCount' as const,tKey:'targetPlacementCount' as const,label:'入社',color:C.pink},
+    {key:'recommendationsSent' as const,tKey:'targetRecommendations' as const,label:'推薦',color:C.accent,unit:'名'},
+    {key:'documentPass' as const,tKey:'targetDocumentPass' as const,label:'書類通過',color:C.purple,unit:'名'},
+    {key:'firstPass' as const,tKey:'targetFirstPass' as const,label:'一次通過',color:C.teal,unit:'名'},
+    {key:'secondPass' as const,tKey:'targetSecondPass' as const,label:'二次通過',color:C.green,unit:'名'},
+    {key:'finalPass' as const,tKey:'targetFinalPass' as const,label:'最終通過',color:C.orange,unit:'名'},
+    {key:'offerCount' as const,tKey:'targetOfferCount' as const,label:'内定',color:C.red,unit:'名'},
+    {key:'placementCount' as const,tKey:'targetPlacementCount' as const,label:'入社',color:C.pink,unit:'名'},
+    {key:'sales' as const,tKey:'targetSales' as const,label:'売上',color:'#d97706',unit:'万'},
   ]
   const convRate=(a:number,b:number)=>b>0?((a/b)*100).toFixed(0)+'%':'—'
   const totalConv=co?convRate(co.placementCount,co.recommendationsSent):'—'
-  const maxVal=co?Math.max(...funnelSteps.map(s=>Math.max(Number(co[s.key])||0,Number(co[s.tKey])||0)),1):1
+  const personSteps=funnelSteps.filter(s=>s.unit==='名')
+  const maxVal=co?Math.max(...personSteps.map(s=>Math.max(Number(co[s.key])||0,Number(co[s.tKey])||0)),1):1
+  const salesMaxVal=co?Math.max(Number(co.sales)||0,Number(co.targetSales)||0,1):1
 
   // Drop records
   const [dropForm,setDropForm]=useState({candidateName:'',stage:'書類',reason:'',date:''})
@@ -171,15 +174,17 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
   const totalRec=commitments.reduce((s,c)=>s+c.recommendationsSent,0)
   const totalOffer=commitments.reduce((s,c)=>s+c.offerCount,0)
   const totalPlace=commitments.reduce((s,c)=>s+c.placementCount,0)
+  const totalSales=commitments.reduce((s,c)=>s+(c.sales||0),0)
 
   // Chart data for comparison
   const chartData=commitments.map((c,i)=>({name:c.name||`企業${i+1}`,推薦:c.recommendationsSent,内定:c.offerCount,入社:c.placementCount}))
 
   return <div className="fade-in">
-    <div className="grid grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-5 gap-4 mb-6">
       <StatCard icon="🏢" label="コミット企業数" value={commitments.length} color={C.accent} />
       <StatCard icon="📤" label="総推薦数" value={totalRec} color={C.purple} />
       <StatCard icon="🎉" label="総内定数" value={totalOffer} color={C.green} />
+      <StatCard icon="💰" label="総売上" value={`${totalSales}万`} color={'#d97706'} />
       <StatCard icon="📊" label="全体転換率" value={totalRec>0?convRate(totalPlace,totalRec):'—'} color={C.orange} />
     </div>
 
@@ -205,24 +210,25 @@ function CompanyCommitTab({commitments,onChange}:{commitments:CompanyCommitment[
                 <div className="w-12"></div>
               </div>
               {funnelSteps.map((step,si)=>{
+                const isSales=step.unit==='万'
                 const val=Number(co[step.key])||0
                 const tgt=Number(co[step.tKey])||0
-                const prevVal=si>0?Number(co[funnelSteps[si-1].key])||0:0
+                const barMax=isSales?salesMaxVal:maxVal
+                const prevVal=si>0&&!isSales?Number(co[funnelSteps[si-1].key])||0:0
                 const pctOfTarget=tgt>0?Math.min((val/tgt)*100,100):0
                 return <div key={step.key}>
+                  {isSales&&<div className="flex items-center gap-3 my-2"><div className="flex-1 h-px" style={{background:C.border}} /><span className="text-xs font-bold" style={{color:C.textTertiary}}>売上</span><div className="flex-1 h-px" style={{background:C.border}} /></div>}
                   <div className="flex items-center gap-3">
-                    <div className="w-16 text-xs font-semibold text-right" style={{color:step.color}}>{step.label}</div>
+                    <div className="w-16 text-xs font-semibold text-right" style={{color:step.color}}>{step.label}{isSales?'(万)':''}</div>
                     <div className="flex-1 h-8 rounded-lg overflow-hidden relative" style={{background:C.surface}}>
-                      {/* Target marker */}
-                      {tgt>0&&<div className="absolute top-0 bottom-0 w-0.5" style={{left:`${Math.max((tgt/maxVal)*100,2)}%`,background:step.color,opacity:0.4,zIndex:1}} />}
-                      {/* Actual bar */}
-                      <div className="h-full rounded-lg transition-all duration-500 flex items-center px-3" style={{width:`${Math.max((val/maxVal)*100,4)}%`,background:step.color+'20'}}>
-                        <span className="text-xs font-bold" style={{color:step.color}}>{val}</span>
+                      {tgt>0&&<div className="absolute top-0 bottom-0 w-0.5" style={{left:`${Math.max((tgt/barMax)*100,2)}%`,background:step.color,opacity:0.4,zIndex:1}} />}
+                      <div className="h-full rounded-lg transition-all duration-500 flex items-center px-3" style={{width:`${Math.max((val/barMax)*100,4)}%`,background:step.color+'20'}}>
+                        <span className="text-xs font-bold" style={{color:step.color}}>{val}{isSales?'万':''}</span>
                       </div>
                     </div>
                     <input type="number" className="ca-input w-16" value={val||''} placeholder="実績" onChange={e=>updateNum(step.key,Number(e.target.value)||0)} />
                     <input type="number" className="ca-input w-16" value={tgt||''} placeholder="目標" style={{borderColor:tgt>0?C.accent+'40':'transparent'}} onChange={e=>updateNum(step.tKey,Number(e.target.value)||0)} />
-                    {si>0&&prevVal>0?<span className="text-xs font-semibold whitespace-nowrap w-12 text-right" style={{color:val/prevVal>=0.5?C.green:val/prevVal>=0.25?C.orange:C.red}}>{convRate(val,prevVal)}</span>:<span className="w-12" />}
+                    {!isSales&&si>0&&prevVal>0?<span className="text-xs font-semibold whitespace-nowrap w-12 text-right" style={{color:val/prevVal>=0.5?C.green:val/prevVal>=0.25?C.orange:C.red}}>{convRate(val,prevVal)}</span>:<span className="w-12" />}
                   </div>
                   {tgt>0&&<div className="ml-[76px] mr-[140px] mt-1">
                     <div className="progress-bar" style={{height:3}}>
