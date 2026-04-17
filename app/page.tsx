@@ -509,15 +509,41 @@ export default function Dashboard() {
   const realtimeRef=useRef<ReturnType<typeof supabase.channel>|null>(null)
   const showToast=useCallback((msg:string,type:'success'|'error'='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)},[])
 
+  // Client-side normalization to prevent data loss from missing fields
+  const normalizeData = useCallback((raw: Record<string, unknown>): WeekData => {
+    const empty = emptyWeekData()
+    const ensureCAArray = (seg: unknown): CaRow[] => {
+      const s = seg as {ca?: CaRow[]} | undefined
+      if (!s?.ca || !Array.isArray(s.ca)) return empty.overall.ca.map(r => ({...r}))
+      const ca = s.ca
+      return CA_NAMES.map((_,i) => ({...EMPTY_CA_ROW, ...(ca[i]||{})}))
+    }
+    return {
+      overall: { ca: ensureCAArray(raw.overall) },
+      cs: { ca: ensureCAArray(raw.cs) },
+      csl: { ca: ensureCAArray(raw.csl) },
+      focusData: Array.isArray(raw.focusData) ? raw.focusData as FocusRow[] : [],
+      pjData: Array.isArray(raw.pjData) ? raw.pjData as PjCard[] : [],
+      caTargets: Array.isArray(raw.caTargets) ? CA_NAMES.map((_,i) => ({...defaultCaTarget(), ...((raw.caTargets as CaTarget[])[i]||{})})) : CA_NAMES.map(()=>defaultCaTarget()),
+      caKarte: Array.isArray(raw.caKarte) ? CA_NAMES.map((_,i) => ({...defaultCAKarte(), ...((raw.caKarte as CAKarte[])[i]||{})})) : CA_NAMES.map(()=>defaultCAKarte()),
+      companyCommitments: Array.isArray(raw.companyCommitments) ? raw.companyCommitments as CompanyCommitment[] : [],
+      fbItems: Array.isArray(raw.fbItems) ? raw.fbItems as FbItem[] : [],
+      study: {...defaultStudy(), ...((raw.study as StudyData)||{})},
+      shiryoItems: Array.isArray(raw.shiryoItems) ? raw.shiryoItems as ShiryoItem[] : [],
+      updatedAt: raw.updatedAt as string|undefined,
+      updatedBy: raw.updatedBy as string|undefined,
+    }
+  },[])
+
   useEffect(()=>{fetch('/api/weeks').then(r=>r.json()).then(j=>{if(j.weeks)setSavedWeeks(j.weeks.map((k:string)=>k.replace(/_/g,'/')))})},[])
 
   const loadData=useCallback(async(w:string)=>{
     setSyncStatus('saving')
     const res=await fetch(`/api/data?week=${labelToKey(w)}`)
     const json=await res.json()
-    if(json.data){setData(json.data);setSyncStatus('saved');setLastSaved(fmtDate())}
+    if(json.data){setData(normalizeData(json.data));setSyncStatus('saved');setLastSaved(fmtDate())}
     else{setData(emptyWeekData());setSyncStatus('idle')}
-  },[])
+  },[normalizeData])
 
   useEffect(()=>{if(user)loadData(week)},[user,week,loadData])
 
@@ -526,11 +552,11 @@ export default function Dashboard() {
     realtimeRef.current?.unsubscribe()
     const ch=supabase.channel('weekly_data_changes').on('postgres_changes',{event:'*',schema:'public',table:'weekly_data',filter:`week_key=eq.${labelToKey(week)}`},payload=>{
       const newData=(payload.new as {payload:WeekData})?.payload
-      if(newData){setData(newData);setSyncStatus('saved');setLastSaved(fmtDate())}
+      if(newData){setData(normalizeData(newData as unknown as Record<string, unknown>));setSyncStatus('saved');setLastSaved(fmtDate())}
     }).subscribe()
     realtimeRef.current=ch
     return()=>{ch.unsubscribe()}
-  },[user,week])
+  },[user,week,normalizeData])
 
   const updateCaRow=useCallback((seg:'cs'|'csl',caIndex:number,field:keyof CaRow,val:number)=>{
     setData(prev=>{const next=JSON.parse(JSON.stringify(prev)) as WeekData;next[seg].ca[caIndex]={...next[seg].ca[caIndex],[field]:val};return next})

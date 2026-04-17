@@ -100,12 +100,13 @@ export async function POST(req: NextRequest) {
     }
     payload.updatedAt = new Date().toISOString()
     payload.updatedBy = user
-    const { error } = await supabase.from('weekly_data').upsert({ week_key: week, payload }, { onConflict: 'week_key' })
+    const finalPayload = migrate(payload)
+    const { error } = await supabase.from('weekly_data').upsert({ week_key: week, payload: finalPayload }, { onConflict: 'week_key' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
   }
 
-  const payload = { ...data, updatedAt: new Date().toISOString(), updatedBy: user }
+  const payload = migrate({ ...data, updatedAt: new Date().toISOString(), updatedBy: user })
   const { error } = await supabase.from('weekly_data').upsert({ week_key: week, payload }, { onConflict: 'week_key' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
