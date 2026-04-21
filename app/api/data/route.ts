@@ -69,7 +69,6 @@ export async function GET(req: NextRequest) {
 
   if (data?.payload) {
     const migrated = migrate(data.payload as Record<string, unknown>)
-    // Auto-save migrated data back to DB if structure changed
     const original = JSON.stringify(data.payload)
     const updated = JSON.stringify(migrated)
     if (original !== updated) {
@@ -77,7 +76,24 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ data: migrated })
   }
-  return NextResponse.json({ data: null })
+
+  // 新規週: 直前週のペイロードを引き継いで新しい週キーで保存してから返す
+  // （企業コミットの target / 企業名 / メモ等を毎週手入力せずに済むようにする。実績値はユーザーが上書きしていく前提）
+  const { data: prev } = await supabase
+    .from('weekly_data')
+    .select('payload')
+    .lt('week_key', week)
+    .order('week_key', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!prev?.payload) return NextResponse.json({ data: null })
+
+  const seeded = migrate(prev.payload as Record<string, unknown>)
+  await supabase
+    .from('weekly_data')
+    .upsert({ week_key: week, payload: seeded }, { onConflict: 'week_key' })
+  return NextResponse.json({ data: seeded })
 }
 
 export async function POST(req: NextRequest) {

@@ -98,25 +98,25 @@ export interface CADropoutData {
 }
 
 export const DROPOUT_STAGES: { key: keyof CADropoutData; label: string; icon: string; color: string }[] = [
-  { key:'initialMeeting', label:'初回面談', icon:'🤝', color:'#2563eb' },
-  { key:'followUpMeeting', label:'再面談', icon:'🔄', color:'#3b82f6' },
-  { key:'documentCreation', label:'書類作成', icon:'📝', color:'#8b5cf6' },
-  { key:'recommendation', label:'推薦', icon:'📤', color:'#6366f1' },
-  { key:'briefing', label:'ブリーフィング', icon:'📋', color:'#14b8a6' },
-  { key:'mockInterview', label:'模擬面接', icon:'🎭', color:'#10b981' },
-  { key:'firstInterview', label:'一次面接', icon:'💼', color:'#f59e0b' },
-  { key:'finalInterview', label:'最終面接', icon:'⭐', color:'#ef4444' },
-  { key:'offer', label:'内定', icon:'🎉', color:'#ec4899' },
+  { key:'initialMeeting', label:'初回面談', icon:'🤝', color:'#FF6B1F' },
+  { key:'followUpMeeting', label:'再面談', icon:'🔄', color:'#E45510' },
+  { key:'documentCreation', label:'書類作成', icon:'📝', color:'#C9894A' },
+  { key:'recommendation', label:'推薦', icon:'📤', color:'#B87333' },
+  { key:'briefing', label:'ブリーフィング', icon:'📋', color:'#D4AF7A' },
+  { key:'mockInterview', label:'模擬面接', icon:'🎭', color:'#B8945F' },
+  { key:'firstInterview', label:'一次面接', icon:'💼', color:'#D9A441' },
+  { key:'finalInterview', label:'最終面接', icon:'⭐', color:'#C7442F' },
+  { key:'offer', label:'内定', icon:'🎉', color:'#8E5522' },
 ]
 
 // ─── ランク別離脱 ───
 export type CandidateRank = 'premium' | 'high' | 'mid' | 'potential'
 
 export const CANDIDATE_RANKS: { key: CandidateRank; label: string; color: string }[] = [
-  { key:'premium', label:'プレミア', color:'#8b5cf6' },
-  { key:'high', label:'ハイ', color:'#2563eb' },
-  { key:'mid', label:'ミドル', color:'#10b981' },
-  { key:'potential', label:'ポテンシャル', color:'#f59e0b' },
+  { key:'premium', label:'プレミア', color:'#8E5522' },
+  { key:'high', label:'ハイ', color:'#FF6B1F' },
+  { key:'mid', label:'ミドル', color:'#B87333' },
+  { key:'potential', label:'ポテンシャル', color:'#D4AF7A' },
 ]
 
 export interface RankDropout {

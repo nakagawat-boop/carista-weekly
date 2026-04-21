@@ -19,17 +19,23 @@ import {
 import LoginScreen from '@/components/LoginScreen'
 import KpiCard from '@/components/KpiCard'
 
-// ─── Color tokens ───
+// ─── Color tokens (Luxury: Orange × Copper × Gold) ───
+// Accent colors are hex so alpha-suffix (`+'14'`) keeps working.
+// Neutrals use CSS vars so Light/Dark themes both work.
 const C = {
-  accent:'#2563eb', accentLight:'#dbeafe', green:'#10b981', greenLight:'rgba(16,185,129,0.08)',
-  orange:'#f59e0b', orangeLight:'rgba(245,158,11,0.08)', red:'#ef4444', redLight:'rgba(239,68,68,0.08)',
-  purple:'#8b5cf6', purpleLight:'rgba(139,92,246,0.08)', teal:'#14b8a6', tealLight:'rgba(20,184,166,0.08)',
-  pink:'#ec4899', text:'#0f172a', textSecondary:'#475569', textTertiary:'#94a3b8',
-  border:'#e2e8f0', borderLight:'#f1f5f9', bg:'#f8fafc', white:'#ffffff', surface:'#f1f5f9',
-  shadow1:'0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.03)',
-  shadow2:'0 4px 16px rgba(0,0,0,0.06),0 2px 4px rgba(0,0,0,0.03)',
+  accent:'#FF6B1F',      accentLight:'#FFE3CE',
+  green:'#3E9B6B',       greenLight:'rgba(62,155,107,0.10)',
+  orange:'#D9A441',      orangeLight:'rgba(217,164,65,0.10)',
+  red:'#C7442F',         redLight:'rgba(199,68,47,0.10)',
+  purple:'#B87333',      purpleLight:'rgba(184,115,51,0.10)',
+  teal:'#D4AF7A',        tealLight:'rgba(212,175,122,0.14)',
+  pink:'#C9894A',
+  text:'var(--ink-0)', textSecondary:'var(--ink-1)', textTertiary:'var(--ink-2)',
+  border:'var(--line-1)', borderLight:'var(--line-1)',
+  bg:'var(--bg-2)', white:'var(--bg-1)', surface:'var(--bg-2)',
+  shadow1:'var(--shadow-sm)', shadow2:'var(--shadow-md)',
 }
-const CHART_COLORS = [C.accent, C.purple, C.teal, C.green, C.orange, C.pink]
+const CHART_COLORS = [C.accent, C.purple, C.teal, '#E45510', C.green, C.orange]
 
 // ─── Helpers ───
 const sum = (arr: CaRow[], f: keyof CaRow) => arr.reduce((s, r) => s + (Number(r[f]) || 0), 0)
@@ -56,24 +62,31 @@ function buildWeekOptions(): string[] {
 
 // ─── Shared UI Components ───
 function SectionTitle({children,color}:{children:React.ReactNode;color?:string}){
-  return <div className="flex items-center gap-3 mb-4"><span className="text-xs font-bold uppercase tracking-wider" style={{color:color??C.textTertiary}}>{children}</span><div className="flex-1 h-px" style={{background:C.border}} /></div>
+  return <div style={{display:'flex', alignItems:'center', gap:14, margin:'4px 0 12px 0', color:'var(--ink-2)', fontSize:10.5, letterSpacing:'0.28em', textTransform:'uppercase'}}>
+    <span style={{color:color??'var(--ink-2)'}}>{children}</span>
+    <div style={{flex:1, height:1, background:'var(--line-1)'}} />
+  </div>
 }
 function Card({title,children,action}:{title:string;children:React.ReactNode;action?:React.ReactNode}){
-  return <div className="bg-white rounded-xl border overflow-hidden mb-5" style={{borderColor:C.border,boxShadow:C.shadow1}}>
-    <div className="flex items-center justify-between px-6 py-4 border-b" style={{borderColor:C.border,background:C.bg}}>
-      <span className="font-bold text-[15px]">{title}</span>{action}
+  return <div className="card" style={{marginBottom:20}}>
+    <div className="card__head">
+      <span className="card__title">{title}</span>
+      {action}
     </div>
     {children}
   </div>
 }
 function StatCard({icon,label,value,color}:{icon:string;label:string;value:string|number;color:string}){
-  return <div className="flex items-center gap-3 bg-white rounded-xl border p-4" style={{borderColor:C.border,boxShadow:C.shadow1}}>
-    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-lg" style={{background:color+'14'}}>{icon}</div>
-    <div><div className="text-xs font-semibold" style={{color:C.textTertiary}}>{label}</div><div className="text-xl font-extrabold">{value}</div></div>
+  return <div className="card" style={{padding:'14px 16px', display:'flex', alignItems:'center', gap:12}}>
+    <div style={{width:42, height:42, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, background:color+'18', color}}>{icon}</div>
+    <div style={{minWidth:0}}>
+      <div className="t-micro" style={{fontSize:9.5, letterSpacing:'0.2em'}}>{label}</div>
+      <div className="num" style={{fontFamily:'var(--font-display)', fontSize:22, fontWeight:500, letterSpacing:'-0.01em', color:'var(--ink-0)', lineHeight:1.1, marginTop:4}}>{value}</div>
+    </div>
   </div>
 }
 function Badge({label,color}:{label:string;color:string}){
-  return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold" style={{background:color+'14',color}}>{label}</span>
+  return <span style={{display:'inline-flex', alignItems:'center', padding:'4px 10px', borderRadius:999, fontSize:11, letterSpacing:'0.04em', fontWeight:500, background:color+'18', color}}>{label}</span>
 }
 
 // ─── CA Table ───
@@ -535,11 +548,32 @@ function StudyTab({study,shiryoItems,onStudyChange,onShiryoChange}:{study:StudyD
 
 // ─── Main Dashboard ───
 type TabId = 'overall'|'cscsl'|'pj'|'target'|'feedback'|'karte'|'commit'
-const TABS:{id:TabId;label:string}[] = [
-  {id:'overall',label:'📈 全体KPI'},{id:'cscsl',label:'🔀 CS/CSL別'},
-  {id:'pj',label:'📋 PJ進捗'},{id:'target',label:'🎯 目標設定'},{id:'feedback',label:'💬 同席FB'},
-  {id:'karte',label:'🩺 CAカルテ'},{id:'commit',label:'🏢 企業コミット'},
+type NavGroup = 'OVERVIEW'|'EXECUTION'|'COACHING'|'PIPELINE'
+interface NavEntry { id: TabId; label: string; group: NavGroup; eyebrow: string; title: string; sub?: string; icon: NavIconName }
+type NavIconName = 'dashboard'|'chart'|'folder'|'target'|'chat'|'users'|'building'
+const NAV: NavEntry[] = [
+  {id:'overall',  label:'全体KPI',        group:'OVERVIEW',  eyebrow:'OVERVIEW · WEEKLY',     title:'全体KPI',           sub:'CS + CSL 合算の週次KPI',                icon:'dashboard'},
+  {id:'cscsl',    label:'CS / CSL 別',    group:'OVERVIEW',  eyebrow:'OVERVIEW · BREAKDOWN',  title:'CS / CSL 別 KPI',   sub:'セグメント別の実績入力',                icon:'chart'},
+  {id:'pj',       label:'PJ進捗',         group:'EXECUTION', eyebrow:'EXECUTION · PROJECTS',  title:'PJ確認シート',      sub:'プロジェクト進捗・担当者・期限',        icon:'folder'},
+  {id:'target',   label:'目標設定',        group:'EXECUTION', eyebrow:'EXECUTION · TARGETS',   title:'目標設定',          sub:'CA別の目標値と達成率',                  icon:'target'},
+  {id:'feedback', label:'同席FB',         group:'COACHING',  eyebrow:'COACHING · FEEDBACK',   title:'同席フィードバック', sub:'同席記録・Q&A',                        icon:'chat'},
+  {id:'karte',    label:'CAカルテ',       group:'COACHING',  eyebrow:'COACHING · KARTE',      title:'CAカルテ',          sub:'パフォーマンス分析とコーチング記録',    icon:'users'},
+  {id:'commit',   label:'企業コミット',    group:'PIPELINE',  eyebrow:'PIPELINE · COMMIT',     title:'企業コミット',      sub:'月次コミット企業とファネル管理',        icon:'building'},
 ]
+
+// Line-style SVG icons
+const NavIcon = ({ name, size=16 }:{ name: NavIconName; size?: number }) => {
+  const p = { width:size, height:size, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.5, strokeLinecap:'round' as const, strokeLinejoin:'round' as const, className:'nav__icon' }
+  switch(name){
+    case 'dashboard': return <svg {...p}><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    case 'chart':     return <svg {...p}><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+    case 'folder':    return <svg {...p}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    case 'target':    return <svg {...p}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+    case 'chat':      return <svg {...p}><path d="M21 12a8 8 0 0 1-11.6 7.2L4 21l1.8-5.4A8 8 0 1 1 21 12z"/></svg>
+    case 'users':     return <svg {...p}><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><circle cx="17" cy="6" r="3"/><path d="M22 17a5 5 0 0 0-7-4.6"/></svg>
+    case 'building':  return <svg {...p}><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/><path d="M10 21v-4h4v4"/></svg>
+  }
+}
 
 export default function Dashboard() {
   const isMobile = useIsMobile()
@@ -552,6 +586,16 @@ export default function Dashboard() {
   const [syncStatus,setSyncStatus]=useState<'idle'|'saving'|'saved'|'error'>('idle')
   const [lastSaved,setLastSaved]=useState('')
   const [toast,setToast]=useState<{msg:string;type:'success'|'error'}|null>(null)
+  const [theme,setTheme]=useState<'light'|'dark'>('light')
+  useEffect(()=>{
+    const t = (typeof window!=='undefined' && localStorage.getItem('carista-theme')) as 'light'|'dark'|null
+    if(t==='light'||t==='dark') setTheme(t)
+  },[])
+  useEffect(()=>{
+    if(typeof document==='undefined') return
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('carista-theme', theme)
+  },[theme])
   const realtimeRef=useRef<ReturnType<typeof supabase.channel>|null>(null)
   const showToast=useCallback((msg:string,type:'success'|'error'='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)},[])
 
@@ -639,46 +683,89 @@ export default function Dashboard() {
   if(!user)return <LoginScreen onLogin={u=>{setUser(u);showToast(`${u}さんでログインしました`)}} />
   const isAdmin=user===ADMIN
 
+  // Group nav items for sidebar
+  const navGroups = NAV.reduce<Record<string, NavEntry[]>>((acc, n) => { (acc[n.group] ||= []).push(n); return acc }, {})
+  const activeNav = NAV.find(n => n.id === tab) ?? NAV[0]
+  const syncLabel = {idle:'未接続', saving:'保存中...', saved:`保存済み ${lastSaved}`, error:'エラー'}[syncStatus]
+  const syncDotClass = {idle:'dot--idle', saving:'dot--warn', saved:'', error:'dot--dn'}[syncStatus]
+
   return (
-    <div style={{fontFamily:'var(--font)',minHeight:'100vh',background:C.bg}}>
-      {/* Header */}
-      <header className="sticky top-0 z-10" style={{background:'rgba(15,23,42,0.97)',backdropFilter:'blur(20px)',color:C.white}}>
-        <div className="flex items-center justify-between" style={{height:isMobile?48:56,padding:isMobile?'0 12px':'0 24px'}}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold" style={{background:'linear-gradient(135deg,#2563eb,#8b5cf6)'}}>C</div>
-            {!isMobile&&<span className="font-bold text-sm">Carista Weekly</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-xs" style={{color:'#94a3b8'}}>
-              <div className="w-2 h-2 rounded-full" style={{background:syncDotColor}} />
-              {!isMobile&&{idle:'未接続',saving:'保存中...',saved:`保存済み ${lastSaved}`,error:'エラー'}[syncStatus]}
-            </div>
-            <select className="text-xs font-medium rounded-lg px-2 py-1.5 outline-none" style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',color:C.white}} value={week} onChange={e=>setWeek(e.target.value)}>
-              {weekOptions.map(w=><option key={w} value={w} style={{color:C.text}}>{w}{savedWeeks.includes(w)?' ✓':''}</option>)}
-            </select>
-            <button className="text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1.5" style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)'}} onClick={()=>{setUser(null);setData(emptyWeekData())}}>
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold" style={{background:isAdmin?C.orange:C.accent}}>{user[0]}</span>
-              {!isMobile&&<>{user}{isAdmin?' (管理者)':''}</>}
-            </button>
-            {!isMobile&&<button onClick={()=>loadData(week)} className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)'}}>読込</button>}
-            <button onClick={saveData} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white" style={{background:C.accent,boxShadow:'0 2px 8px rgba(37,99,235,0.3)'}}>
-              {isMobile?'保存':isAdmin?'全体保存':'自分を保存'}
-            </button>
-          </div>
+    <div className="app">
+      {/* Sidebar */}
+      <aside className="sidebar tex-noise">
+        <div className="brand">
+          <div className="brand__wordmark">Carista</div>
+          <div className="brand__sub">Weekly · MTG</div>
         </div>
-      </header>
+        <nav className="nav">
+          {Object.entries(navGroups).map(([g, items]) => (
+            <div key={g}>
+              <div className="nav__section">{g}</div>
+              {items.map(item => (
+                <button key={item.id} className={`nav__item${tab===item.id?' nav__item--active':''}`} onClick={()=>setTab(item.id)}>
+                  <NavIcon name={item.icon} size={15} />
+                  <span>{item.label}</span>
+                  {item.id==='feedback' && data.fbItems.length>0 && (
+                    <span style={{marginLeft:'auto', fontSize:10, fontWeight:600, padding:'2px 7px', borderRadius:999, background:'var(--grad-orange-copper)', color:'#FFF'}}>{data.fbItems.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar__footer">
+          <div className="avatar">{user[0]}</div>
+          <div className="sidebar__user-meta">
+            {user}
+            <small>{isAdmin?'ADMIN · 全体編集':'CA · 自分のみ編集'}</small>
+          </div>
+          <button onClick={()=>{setUser(null);setData(emptyWeekData())}} aria-label="logout" style={{color:'rgba(245,239,226,0.5)'}} title="ログアウト">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          </button>
+        </div>
+      </aside>
 
-      {/* Tab Navigation */}
-      <nav className="flex overflow-x-auto" style={{background:C.white,borderBottom:`1px solid ${C.border}`,padding:isMobile?'0 8px':'0 24px'}}>
-        {TABS.map(t=><button key={t.id} className={`tab-btn${tab===t.id?' active':''}`} style={isMobile?{padding:'10px 12px',fontSize:12}:undefined} onClick={()=>setTab(t.id)}>{t.label}</button>)}
-      </nav>
+      {/* Main column */}
+      <div style={{minWidth:0}}>
+        {/* Topbar */}
+        <header className="topbar">
+          <div className="topbar__title-wrap">
+            <span className="topbar__eyebrow">{activeNav.eyebrow}</span>
+            <h1 className="topbar__title">{activeNav.title}</h1>
+          </div>
+          <div className="topbar__spacer" />
+          <div className="topbar__pill" title={syncLabel}>
+            <span className={`dot ${syncDotClass}`}/>
+            {!isMobile && <span>{syncLabel}</span>}
+          </div>
+          <select className="topbar__select num" value={week} onChange={e=>setWeek(e.target.value)} aria-label="週選択">
+            {weekOptions.map(w=><option key={w} value={w}>{w}{savedWeeks.includes(w)?' ✓':''}</option>)}
+          </select>
+          <div className="theme-toggle" role="group" aria-label="theme">
+            <button className={theme==='light'?'on':''} onClick={()=>setTheme('light')} aria-label="Light">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+              {!isMobile && 'Light'}
+            </button>
+            <button className={theme==='dark'?'on':''} onClick={()=>setTheme('dark')} aria-label="Dark">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+              {!isMobile && 'Dark'}
+            </button>
+          </div>
+          <button className="btn btn--ghost" onClick={()=>loadData(week)} title="読み込み">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 21v-5h5"/></svg>
+            {!isMobile && '読込'}
+          </button>
+          <button onClick={saveData} className="btn btn--primary" title={isAdmin?'全体保存':'自分を保存'}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            {isMobile?'保存':isAdmin?'全体保存':'自分を保存'}
+          </button>
+        </header>
 
-      {/* Main Content */}
-      <main style={{maxWidth:1400,margin:'0 auto',padding:isMobile?'16px 12px':'24px'}}>
+        {/* Main Content */}
+        <main className="main">
         {/* 全体KPI */}
         {tab==='overall'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">全体KPI</h2><p className="text-sm" style={{color:C.textTertiary}}>CS + CSL の合算値が自動反映されます</p></div>
-          <SectionTitle>全体指標</SectionTitle>
+          <SectionTitle>全体指標 — CS + CSL 合算</SectionTitle>
           {renderKpiGrid(overallKpi,'CS+CSL')}
 
           <div className="grid gap-5 mb-5" style={{gridTemplateColumns:isMobile?'1fr':'1fr 1fr'}}>
@@ -710,49 +797,56 @@ export default function Dashboard() {
 
         {/* CS/CSL別 */}
         {tab==='cscsl'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">CS / CSL 別KPI</h2></div>
-          <div className="flex gap-2 mb-6">{(['cs','csl'] as const).map(s=><button key={s} onClick={()=>setSeg(s)} className="px-6 py-2.5 rounded-full font-semibold text-sm transition-all" style={{border:'1.5px solid',borderColor:seg===s?(s==='cs'?C.accent:C.purple):C.border,background:seg===s?(s==='cs'?C.accent:C.purple):C.white,color:seg===s?C.white:C.text}}>{s.toUpperCase()}</button>)}</div>
+          <div className="tabbar" style={{marginBottom:20}}>
+            {(['cs','csl'] as const).map(s=>(
+              <button key={s} className={seg===s?'on':''} onClick={()=>setSeg(s)}>{s.toUpperCase()}</button>
+            ))}
+          </div>
           {seg==='cs'&&<><SectionTitle color={C.accent}>CS 全体指標</SectionTitle>{renderKpiGrid(csKpi)}<Card title="CS CA別"><CaTable data={data.cs.ca} currentUser={user} onChange={(i,f,v)=>updateCaRow('cs',i,f,v)} /></Card></>}
-          {seg==='csl'&&<><SectionTitle color={C.purple}>CSL 全体指標</SectionTitle>{renderKpiGrid(cslKpi)}<Card title="CSL CA���"><CaTable data={data.csl.ca} currentUser={user} onChange={(i,f,v)=>updateCaRow('csl',i,f,v)} /></Card></>}
+          {seg==='csl'&&<><SectionTitle color={C.purple}>CSL 全体指標</SectionTitle>{renderKpiGrid(cslKpi)}<Card title="CSL CA別"><CaTable data={data.csl.ca} currentUser={user} onChange={(i,f,v)=>updateCaRow('csl',i,f,v)} /></Card></>}
         </div>}
 
         {/* PJ進捗 */}
         {tab==='pj'&&<div className="fade-in">
-          <div className="mb-6 flex items-center justify-between">
-            <div><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">PJ確認シート</h2></div>
-            <button onClick={()=>setData(p=>({...p,pjData:[...p.pjData,defaultPjCard()]}))} className="text-xs font-semibold px-4 py-2.5 rounded-lg" style={{border:`1.5px dashed ${C.border}`,color:C.textTertiary,background:C.white}}>+ PJを追加</button>
+          <div style={{display:'flex', justifyContent:'flex-end', marginBottom:16}}>
+            <button onClick={()=>setData(p=>({...p,pjData:[...p.pjData,defaultPjCard()]}))} className="btn btn--ghost" style={{borderStyle:'dashed'}}>+ PJを追加</button>
           </div>
           <PjList pjData={data.pjData} onChange={pjData=>setData(p=>({...p,pjData}))} />
         </div>}
 
         {/* 目標設定 */}
         {tab==='target'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">目標設定</h2><p className="text-sm" style={{color:C.textTertiary}}>個人KPI目標と達成率</p></div>
           <TargetTab caData={overallCA} targets={data.caTargets} currentUser={user} onChange={caTargets=>setData(p=>({...p,caTargets}))} />
         </div>}
 
         {/* 同席FB */}
         {tab==='feedback'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">同席フィードバック</h2></div>
           <FeedbackTab fbItems={data.fbItems} onChange={fbItems=>setData(p=>({...p,fbItems}))} currentUser={user} />
         </div>}
 
         {/* CAカルテ */}
         {tab==='karte'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">CAカル���</h2><p className="text-sm" style={{color:C.textTertiary}}>パフォーマンス分析とコーチング記録</p></div>
           <CAKarteTab karte={data.caKarte} fbItems={data.fbItems} currentUser={user} onChange={caKarte=>setData(p=>({...p,caKarte}))} />
         </div>}
 
-        {/* 企業コミッ�� */}
+        {/* 企業コミット */}
         {tab==='commit'&&<div className="fade-in">
-          <div className="mb-6"><h2 className="text-[22px] font-extrabold tracking-tight mb-0.5">企業コミット</h2><p className="text-sm" style={{color:C.textTertiary}}>月次コミット企業とファネル管理</p></div>
           <CompanyCommitTab commitments={data.companyCommitments} onChange={companyCommitments=>setData(p=>({...p,companyCommitments}))} />
         </div>}
 
-      </main>
+        </main>
+      </div>
 
       {/* Toast */}
-      {toast&&<div className="fixed bottom-6 right-6 px-5 py-3 rounded-xl text-sm font-medium z-50 slide-up" style={{background:toast.type==='success'?C.text:C.white,color:toast.type==='success'?C.white:C.red,boxShadow:'var(--shadow-lg)'}}>{toast.msg}</div>}
+      {toast&&<div className="slide-up" style={{
+        position:'fixed', bottom:24, right:24, zIndex:80,
+        padding:'12px 18px', borderRadius:'var(--r-3)',
+        fontSize:13, fontWeight:500, letterSpacing:'0.02em',
+        background:'var(--bg-elev)',
+        border:`1px solid ${toast.type==='success'?'rgba(62,155,107,0.3)':'rgba(199,68,47,0.3)'}`,
+        color: toast.type==='success'?'var(--success)':'var(--danger)',
+        boxShadow:'var(--shadow-lg)',
+      }}>{toast.msg}</div>}
     </div>
   )
 }
