@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { CA_NAMES } from '@/types'
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+
+// CA人数（types/index.ts の CA_NAMES と常に一致させる）
+const CA_COUNT = CA_NAMES.length
+const caArr = <T,>(make: () => T): T[] => Array.from({ length: CA_COUNT }, make)
 
 const EMPTY_CA = { focusCount:0, interviewSet:0, meetings:0, active:0, decided:0, sales:0, zuba:0, cl:0, memo:'' }
 const EMPTY_TARGET = { focusCount:0, interviewSet:0, meetings:0, active:10, decided:2, sales:300, zuba:200, cl:100 }
@@ -20,27 +25,49 @@ const EMPTY_KARTE = () => ({
 })
 const EMPTY_STUDY = { date:'', theme:'', learning:'', members:'', next:'', requester:'', content:'', actionItems:'', sharedNotes:'' }
 
+// 週次KPI実績フィールド（月またぎでリセットする「数字」）
+const KPI_KEYS = ['focusCount','interviewSet','meetings','active','decided','sales','zuba','cl']
+
+// week_key: YYYY_MM_NW → YYYY_MM（月）を取り出す
+function monthOf(weekKey: string): string {
+  const p = weekKey.split('_')
+  return p.length >= 2 ? `${p[0]}_${p[1]}` : weekKey
+}
+
+// CS/CSL/全体のCA別KPI実績を0にリセット（目標値・企業名・コミット目標・カルテ等は維持）
+function resetKpiActuals(payload: Record<string, unknown>): Record<string, unknown> {
+  for (const seg of ['overall','cs','csl']) {
+    const segData = payload[seg] as { ca: Record<string, unknown>[] } | undefined
+    if (segData?.ca) {
+      segData.ca = segData.ca.map(row => {
+        const r = { ...row }
+        for (const k of KPI_KEYS) r[k] = 0
+        return r
+      })
+    }
+  }
+  return payload
+}
+
 function migrate(payload: Record<string, unknown>): Record<string, unknown> {
   // Ensure CA rows have all fields
   for (const seg of ['overall','cs','csl']) {
-    if (!payload[seg]) payload[seg] = { ca: [EMPTY_CA, EMPTY_CA, EMPTY_CA, EMPTY_CA] }
+    if (!payload[seg]) payload[seg] = { ca: caArr(() => ({ ...EMPTY_CA })) }
     const segData = payload[seg] as { ca: Record<string, unknown>[] }
-    if (!segData.ca) segData.ca = [EMPTY_CA, EMPTY_CA, EMPTY_CA, EMPTY_CA]
+    if (!segData.ca) segData.ca = caArr(() => ({ ...EMPTY_CA }))
     segData.ca = segData.ca.map(row => ({ ...EMPTY_CA, ...row }))
-    while (segData.ca.length < 4) segData.ca.push({ ...EMPTY_CA })
+    while (segData.ca.length < CA_COUNT) segData.ca.push({ ...EMPTY_CA })
   }
   // Ensure new top-level fields
-  if (!payload.caTargets) payload.caTargets = [EMPTY_TARGET, EMPTY_TARGET, EMPTY_TARGET, EMPTY_TARGET]
-  if (!Array.isArray(payload.caTargets)) payload.caTargets = [EMPTY_TARGET, EMPTY_TARGET, EMPTY_TARGET, EMPTY_TARGET]
+  if (!Array.isArray(payload.caTargets)) payload.caTargets = caArr(() => ({ ...EMPTY_TARGET }))
   const targets = payload.caTargets as Record<string, unknown>[]
   payload.caTargets = targets.map(t => ({ ...EMPTY_TARGET, ...t }))
-  while ((payload.caTargets as unknown[]).length < 4) (payload.caTargets as unknown[]).push({ ...EMPTY_TARGET })
+  while ((payload.caTargets as unknown[]).length < CA_COUNT) (payload.caTargets as unknown[]).push({ ...EMPTY_TARGET })
 
-  if (!payload.caKarte) payload.caKarte = [EMPTY_KARTE(), EMPTY_KARTE(), EMPTY_KARTE(), EMPTY_KARTE()]
-  if (!Array.isArray(payload.caKarte)) payload.caKarte = [EMPTY_KARTE(), EMPTY_KARTE(), EMPTY_KARTE(), EMPTY_KARTE()]
+  if (!Array.isArray(payload.caKarte)) payload.caKarte = caArr(() => EMPTY_KARTE())
   const kartes = payload.caKarte as Record<string, unknown>[]
   payload.caKarte = kartes.map(k => ({ ...EMPTY_KARTE(), ...k }))
-  while ((payload.caKarte as unknown[]).length < 4) (payload.caKarte as unknown[]).push(EMPTY_KARTE())
+  while ((payload.caKarte as unknown[]).length < CA_COUNT) (payload.caKarte as unknown[]).push(EMPTY_KARTE())
 
   if (!payload.companyCommitments) payload.companyCommitments = []
   // Migrate company commitments to include target fields
@@ -81,7 +108,7 @@ export async function GET(req: NextRequest) {
   // （企業コミットの target / 企業名 / メモ等を毎週手入力せずに済むようにする。実績値はユーザーが上書きしていく前提）
   const { data: prev } = await supabase
     .from('weekly_data')
-    .select('payload')
+    .select('week_key,payload')
     .lt('week_key', week)
     .order('week_key', { ascending: false })
     .limit(1)
@@ -89,7 +116,11 @@ export async function GET(req: NextRequest) {
 
   if (!prev?.payload) return NextResponse.json({ data: null })
 
-  const seeded = migrate(prev.payload as Record<string, unknown>)
+  let seeded = migrate(prev.payload as Record<string, unknown>)
+  // 月をまたぐ新規週は週次KPI実績（数字）をリセット。同月内は従来どおり引き継ぐ
+  if (monthOf(prev.week_key as string) !== monthOf(week)) {
+    seeded = resetKpiActuals(seeded)
+  }
   await supabase
     .from('weekly_data')
     .upsert({ week_key: week, payload: seeded }, { onConflict: 'week_key' })

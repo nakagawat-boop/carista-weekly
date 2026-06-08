@@ -1,5 +1,5 @@
 // ─── CA定義 ───
-export const CA_NAMES = ['中村','大城','小谷','喜多'] as const
+export const CA_NAMES = ['中村','大城','小谷','喜多','福田','清野'] as const
 export type CaName = typeof CA_NAMES[number]
 export const ADMIN: CaName = '中村'
 
