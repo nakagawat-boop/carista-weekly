@@ -91,7 +91,7 @@ function migrate(payload: Record<string, unknown>): Record<string, unknown> {
 export async function GET(req: NextRequest) {
   const week = req.nextUrl.searchParams.get('week')
   if (!week) return NextResponse.json({ error: 'week required' }, { status: 400 })
-  const { data, error } = await supabase.from('weekly_data').select('*').eq('week_key', week).single()
+  const { data, error } = await supabase.from('weekly_data').select('week_key,payload').eq('week_key', week).single()
   if (error && error.code !== 'PGRST116') return NextResponse.json({ error: error.message }, { status: 500 })
 
   if (data?.payload) {
